@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuantumQR Pro — Professional High-Quality QR Code Studio & Computer Vision Scanner</title>
+  <meta name="description" content="Generate high-resolution custom styled QR codes with gradients, module shapes, and logos. Scan via real-time camera or image upload with OpenCV computer vision.">
+  <meta name="keywords" content="QR code generator, QR code scanner, high resolution QR, vector SVG QR, batch QR generator, Wi-Fi QR, vCard QR">
+  <meta name="theme-color" content="#080b14">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="/static/css/style.css?v=2.2">
+  <link rel="stylesheet" href="/static/css/toast.css?v=2.2">
+</head>
+<body>
+
+  <!-- Ambient Background Mesh Glow -->
+  <div class="bg-mesh-glow">
+    <div class="mesh-orb mesh-orb-1"></div>
+    <div class="mesh-orb mesh-orb-2"></div>
+    <div class="mesh-orb mesh-orb-3"></div>
+  </div>
+
+  <div class="app-wrapper">
+
+    <!-- Header Section -->
+    <header class="app-header">
+      <div class="brand-section">
+        <div class="brand-logo-badge" title="QuantumQR Pro Engine">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="14" width="4" height="4"/>
+            <line x1="21" y1="14" x2="21" y2="21"/>
+            <line x1="14" y1="21" x2="21" y2="21"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>QuantumQR <span class="brand-badge">PRO v2.0</span></h1>
+          <div class="brand-subtitle">High-Precision QR Code Studio & Computer Vision Scanner</div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Audio Effects Toggle -->
+        <button id="sound-toggle-btn" class="header-btn" title="Toggle Sound Effects" aria-label="Toggle Sound Effects">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          </svg>
+        </button>
+
+        <!-- Theme Toggle -->
+        <button id="theme-toggle-btn" class="header-btn" title="Switch Theme" aria-label="Switch Theme">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+
+        <!-- Fullscreen Toggle -->
+        <button id="fullscreen-btn" class="header-btn" title="Toggle Fullscreen" aria-label="Toggle Fullscreen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="main-nav-tabs" aria-label="Main Navigation">
+      <button class="nav-tab-btn active" data-tab="generator" id="nav-btn-generator">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+        Generator Studio
+      </button>
+
+      <button class="nav-tab-btn" data-tab="scanner" id="nav-btn-scanner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        Scanner & Inspector
+      </button>
+
+      <button class="nav-tab-btn" data-tab="batch" id="nav-btn-batch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="21 8 21 21 3 21 3 8"/>
+          <rect x="1" y="3" width="22" height="5"/>
+          <line x1="10" y1="12" x2="14" y2="12"/>
+        </svg>
+        Batch Generator
+      </button>
+
+      <button class="nav-tab-btn" data-tab="history" id="nav-btn-history">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        History & Saved
+      </button>
+    </nav>
+
+    <!-- ================================================================= -->
+    <!-- TAB 1: GENERATOR STUDIO -->
+    <!-- ================================================================= -->
+    <main id="tab-generator" class="tab-pane active">
+      <div class="generator-grid">
+
+        <!-- Left Column: Controls & Styling -->
+        <div class="glass-panel">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+              Content & Architecture
+            </h2>
+            <span class="brand-badge">10 Data Types</span>
+          </div>
+
+          <!-- Type Selector Chips Grid -->
+          <div class="type-selector-wrapper">
+            <div class="type-chips-grid">
+              <button class="type-chip active" data-type="url" id="type-url">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                URL Link
+              </button>
+              <button class="type-chip" data-type="text" id="type-text">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                Plain Text
+              </button>
+              <button class="type-chip" data-type="wifi" id="type-wifi">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                Wi-Fi
+              </button>
+              <button class="type-chip" data-type="vcard" id="type-vcard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                vCard Contact
+              </button>
+              <button class="type-chip" data-type="email" id="type-email">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                Email
+              </button>
+              <button class="type-chip" data-type="phone" id="type-phone">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                Phone
+              </button>
+              <button class="type-chip" data-type="sms" id="type-sms">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                SMS / Chat
+              </button>
+              <button class="type-chip" data-type="geo" id="type-geo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                Location
+              </button>
+              <button class="type-chip" data-type="crypto" id="type-crypto">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                Crypto / Pay
+              </button>
+              <button class="type-chip" data-type="event" id="type-event">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Event
+              </button>
+            </div>
+          </div>
+
+          <!-- Dynamic Type Forms -->
+          <div class="type-form-container">
+
+            <!-- 1. URL Form -->
+            <div id="form-url" class="type-form">
+              <div class="form-group">
+                <label class="form-label" for="input-url">Website URL</label>
+                <div class="input-with-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                  <input type="url" id="input-url" class="form-input" placeholder="https://yourwebsite.com" value="https://quantumqr.app">
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Text Form -->
+            <div id="form-text" class="type-form" style="display:none;">
+              <div class="form-group">
+                <label class="form-label" for="input-text">Text Content / Note</label>
+                <textarea id="input-text" class="form-textarea" placeholder="Enter your text, notes, or raw string...">Welcome to QuantumQR Pro!</textarea>
+              </div>
+            </div>
+
+            <!-- 3. Wi-Fi Form -->
+            <div id="form-wifi" class="type-form" style="display:none;">
+              <div class="form-group">
+                <label class="form-label" for="wifi-ssid">Network SSID (Name)</label>
+                <input type="text" id="wifi-ssid" class="form-input" placeholder="e.g. Quantum_Guest_5G" value="Quantum_Guest_5G">
+              </div>
+              <div class="form-grid-2 form-group">
+                <div>
+                  <label class="form-label" for="wifi-pass">Password</label>
+                  <input type="text" id="wifi-pass" class="form-input" placeholder="Wi-Fi Password" value="SuperSecure123">
+                </div>
+                <div>
+                  <label class="form-label" for="wifi-auth">Encryption</label>
+                  <select id="wifi-auth" class="form-select">
+                    <option value="WPA" selected>WPA/WPA2/WPA3</option>
+                    <option value="WEP">WEP</option>
+                    <option value="nopass">No Encryption (Open)</option>
+                  </select>
+                </div>
+              </div>
+              <label class="checkbox-group">
+                <input type="checkbox" id="wifi-hidden">
+                <span>Hidden Network SSID</span>
+              </label>
+            </div>
+
+            <!-- 4. vCard Form -->
+            <div id="form-vcard" class="type-form" style="display:none;">
+              <div class="form-grid-2 form-group">
+                <div>
+                  <label class="form-label" for="vcard-fn">Full Name</label>
+                  <input type="text" id="vcard-fn" class="form-input" placeholder="Alex Morgan" value="Alex Morgan">
+                </div>
+                <div>
+                  <label class="form-label" for="vcard-tel">Phone Number</label>
+                  <input type="tel" id="vcard-tel" class="form-input" placeholder="+1 (555) 234-5678" value="+1 (555) 234-5678">
+                </div>
+              </div>
+              <div class="form-grid-2 form-group">
+                <div>
+                  <label class="form-label" for="vcard-email">Email</label>
+                  <input type="email" id="vcard-email" class="form-input" placeholder="alex@quantum.io" value="alex@quantum.io">
+                </div>
+                <div>
+                  <label class="form-label" for="vcard-org">Organization</label>
+                  <input type="text" id="vcard-org" class="form-input" placeholder="Quantum AI Labs" value="Quantum AI Labs">
+                </div>
+              </div>
+              <div class="form-grid-2 form-group">
+                <div>
+                  <label class="form-label" for="vcard-title">Job Title</label>
+                  <input type="text" id="vcard-title" class="form-input" placeholder="Lead Architect" value="Lead Architect">
+                </div>
+                <div>
+                  <label class="form-label" for="vcard-url">Website</label>
+                  <input type="url" id="vcard-url" class="form-input" placeholder="https://quantum.io" value="https://quantum.io">
+                </div>
+              </div>
+            </div>
+
+            <!-- 5. Email Form -->
+            <div id="form-email" class="type-form" style="display:none;">
+              <div class="form-group">
+                <label class="form-label" for="email-to">Recipient Email</label>
+                <input type="email" id="email-to" class="form-input" placeholder="hello@company.com" value="hello@company.com">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="email-sub">Subject Line</label>
+                <input type="text" id="email-sub" class="form-input" placeholder="Inquiry about services" value="Project Collaboration">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="email-body">Message Body</label>
+                <textarea id="email-body" class="form-textarea" placeholder="Write pre-filled message...">Hi, I saw your QR code and wanted to get in touch!</textarea>
+              </div>
+            </div>
+
+            <!-- 6. Phone Form -->
+            <div id="form-phone" class="type-form" style="display:none;">
+              <div class="form-group">
+                <label class="form-label" for="input-phone">Phone Number</label>
+                <div class="input-with-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                  <input type="tel" id="input-phone" class="form-input" placeholder="+1234567890" value="+1234567890">
+                </div>
+              </div>
+            </div>
+
+            <!-- 7. SMS Form -->
+            <div id="form-sms" class="type-form" style="display:none;">
+              <div class="form-group">
+                <label class="form-label" for="sms-phone">Phone / WhatsApp Number</label>
+                <input type="tel" id="sms-phone" class="form-input" placeholder="+1234567890" value="+1234567890">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="sms-msg">Message Content</label>
+                <textarea id="sms-msg" class="form-textarea" placeholder="Pre-filled SMS text...">Hello! Contacting you from the QuantumQR code.</textarea>
+              </div>
+            </div>
+
+            <!-- 8. Geo Location Form -->
+            <div id="form-geo" class="type-form" style="display:none;">
+              <div class="form-grid-2 form-group">
+                <div>
+                  <label class="form-label" for="geo-lat">Latitude</label>
+                  <input type="text" id="geo-lat" class="form-input" placeholder="37.7749" value="37.7749">
+                </div>
+                <div>
+                  <label class="form-label" for="geo-lng">Longitude</label>
+                  <input type="text" id="geo-lng" class="form-input" placeholder="-122.4194" value="-122.4194">
+                </div>
+              </div>
+            </div>
+
+            <!-- 9. Crypto Form -->
+            <div id="form-crypto" class="type-form" style="display:none;">
+              <div class="form-grid-2 form-group">
+                <div>
+                  <label class="form-label" for="crypto-scheme">Asset / Payment</label>
+                  <select id="crypto-scheme" class="form-select">
+                    <option value="bitcoin" selected>Bitcoin (BTC)</option>
+                    <option value="ethereum">Ethereum (ETH)</option>
+                    <option value="solana">Solana (SOL)</option>
+                    <option value="upi">UPI Payment</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label" for="crypto-amt">Amount (Optional)</label>
+                  <input type="text" id="crypto-amt" class="form-input" placeholder="0.05">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="crypto-addr">Wallet Address / VPA</label>
+                <input type="text" id="crypto-addr" class="form-input" placeholder="Address..." value="1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa">
+              </div>
+            </div>
+
+            <!-- 10. Event Form -->
+            <div id="form-event" class="type-form" style="display:none;">
+              <div class="form-group">
+                <label class="form-label" for="event-title">Event Title</label>
+                <input type="text" id="event-title" class="form-input" placeholder="Tech Summit 2026" value="Tech Summit 2026">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="event-loc">Location</label>
+                <input type="text" id="event-loc" class="form-input" placeholder="Convention Center, Hall A" value="Convention Center, Hall A">
+              </div>
+              <div class="form-grid-2 form-group">
+                <div>
+                  <label class="form-label" for="event-start">Start Date/Time</label>
+                  <input type="datetime-local" id="event-start" class="form-input">
+                </div>
+                <div>
+                  <label class="form-label" for="event-end">End Date/Time</label>
+                  <input type="datetime-local" id="event-end" class="form-input">
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ================= Accordion Customization Sections ================= -->
+
+          <!-- 1. Colors & Gradients -->
+          <div class="accordion-item open">
+            <div class="accordion-header">
+              <span class="accordion-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+                Colors & Luxury Gradients
+              </span>
+              <svg class="accordion-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="accordion-body">
+              <!-- Presets -->
+              <div class="preset-palettes-row">
+                <div class="preset-badge" data-palette="cyber">
+                  <div class="color-dot" style="background: linear-gradient(135deg, #6366f1, #06b6d4);"></div>
+                  Cyber Glow
+                </div>
+                <div class="preset-badge" data-palette="emerald">
+                  <div class="color-dot" style="background: linear-gradient(135deg, #059669, #10b981);"></div>
+                  Emerald Tech
+                </div>
+                <div class="preset-badge" data-palette="sunset">
+                  <div class="color-dot" style="background: linear-gradient(135deg, #f43f5e, #fb923c);"></div>
+                  Sunset Orange
+                </div>
+                <div class="preset-badge" data-palette="neon_violet">
+                  <div class="color-dot" style="background: linear-gradient(135deg, #8b5cf6, #ec4899);"></div>
+                  Neon Violet
+                </div>
+                <div class="preset-badge" data-palette="midnight">
+                  <div class="color-dot" style="background: #0f172a;"></div>
+                  Midnight Obsidian
+                </div>
+                <div class="preset-badge" data-palette="gold">
+                  <div class="color-dot" style="background: linear-gradient(135deg, #d97706, #f59e0b);"></div>
+                  Royal Gold
+                </div>
+              </div>
+
+              <!-- Gradient Mode Selector -->
+              <div class="form-group" style="margin-bottom: 0.75rem;">
+                <label class="form-label" for="color-mode-select">Gradient Orientation</label>
+                <select id="color-mode-select" class="form-select">
+                  <option value="vertical" selected>Vertical Gradient (Top to Bottom)</option>
+                  <option value="horizontal">Horizontal Gradient (Left to Right)</option>
+                  <option value="radial">Radial Gradient (Center Out)</option>
+                  <option value="solid">Solid Color (Uniform)</option>
+                </select>
+              </div>
+
+              <!-- Color Pickers Grid -->
+              <div class="color-picker-grid">
+                <div class="color-picker-item">
+                  <label class="form-label">Foreground Color 1</label>
+                  <div class="color-picker-input-wrapper">
+                    <input type="color" id="fg-color-1" value="#6366f1">
+                    <input type="text" id="fg-hex-1" class="hex-text-input" value="#6366F1">
+                  </div>
+                </div>
+
+                <div class="color-picker-item" id="fg2-picker-group">
+                  <label class="form-label">Foreground Color 2</label>
+                  <div class="color-picker-input-wrapper">
+                    <input type="color" id="fg-color-2" value="#06b6d4">
+                    <input type="text" id="fg-hex-2" class="hex-text-input" value="#06B6D4">
+                  </div>
+                </div>
+
+                <div class="color-picker-item">
+                  <label class="form-label">Background Color</label>
+                  <div class="color-picker-input-wrapper">
+                    <input type="color" id="bg-color" value="#ffffff">
+                    <input type="text" id="bg-hex" class="hex-text-input" value="#FFFFFF">
+                  </div>
+                </div>
+              </div>
+
+              <label class="checkbox-group">
+                <input type="checkbox" id="transparent-bg-checkbox">
+                <span>Transparent Background (PNG & WebP export)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 2. Module Shapes & Patterns -->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <span class="accordion-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                Module Shapes & Corner Styles
+              </span>
+              <svg class="accordion-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="accordion-body">
+              <label class="form-label">Module Architecture Style</label>
+              <div class="option-chips-group">
+                <div class="option-chip drawer-chip active" data-style="rounded">Rounded Modules</div>
+                <div class="option-chip drawer-chip" data-style="circle">Circular Dots</div>
+                <div class="option-chip drawer-chip" data-style="square">Classic Square</div>
+                <div class="option-chip drawer-chip" data-style="gapped">Gapped Squares</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Logo & Watermark Overlay -->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <span class="accordion-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                Branding & Center Logo
+              </span>
+              <svg class="accordion-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="accordion-body">
+              <label class="form-label">Quick Preset Icons</label>
+              <div class="logo-icons-grid">
+                <button class="logo-preset-btn" data-icon="link" title="Web Link">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                </button>
+                <button class="logo-preset-btn" data-icon="wifi" title="Wi-Fi">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                </button>
+                <button class="logo-preset-btn" data-icon="mail" title="Email">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                </button>
+                <button class="logo-preset-btn" data-icon="phone" title="Phone">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                </button>
+                <button class="logo-preset-btn" data-icon="map" title="Location">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                </button>
+                <button class="logo-preset-btn" data-icon="star" title="Star">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                </button>
+              </div>
+
+              <!-- Upload Custom Logo -->
+              <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <label class="btn btn-secondary btn-sm" style="cursor: pointer;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Upload Brand Logo
+                  <input type="file" id="logo-upload-input" accept="image/*" style="display: none;">
+                </label>
+                <span id="logo-filename-status" style="font-size: 0.8rem; color: var(--text-dim); display: none;"></span>
+                <button id="remove-logo-btn" class="btn btn-outline btn-sm" style="display: none; color: #ef4444;">
+                  Remove Logo
+                </button>
+              </div>
+
+              <!-- Logo Scale Slider -->
+              <div class="slider-group" style="margin-top: 1rem;">
+                <div class="slider-label-row">
+                  <span>Logo Center Scale</span>
+                  <span id="logo-scale-val" class="slider-val">22%</span>
+                </div>
+                <input type="range" id="logo-scale-slider" class="custom-range-slider" min="14" max="30" value="22">
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Resolution & Output Precision -->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <span class="accordion-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                Resolution, Margin & Error Correction
+              </span>
+              <svg class="accordion-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="accordion-body">
+              <div class="form-group">
+                <label class="form-label">Error Correction Level</label>
+                <div class="option-chips-group">
+                  <div class="option-chip ec-chip" data-ec="L">Low (7%)</div>
+                  <div class="option-chip ec-chip" data-ec="M">Medium (15%)</div>
+                  <div class="option-chip ec-chip" data-ec="Q">Quartile (25%)</div>
+                  <div class="option-chip ec-chip active" data-ec="H">High (30% - Best for Logos)</div>
+                </div>
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-label-row">
+                  <span>Export Resolution Dimension</span>
+                  <span id="size-val" class="slider-val">512px</span>
+                </div>
+                <input type="range" id="size-slider" class="custom-range-slider" min="256" max="2048" step="128" value="512">
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-label-row">
+                  <span>Quiet Zone Padding (Border Modules)</span>
+                  <span id="margin-val" class="slider-val">2</span>
+                </div>
+                <input type="range" id="margin-slider" class="custom-range-slider" min="0" max="6" step="1" value="2">
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Live Stage & Downloads -->
+        <div class="preview-sticky-container">
+          <div class="glass-panel">
+            <div class="panel-header">
+              <h2 class="panel-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                Live Interactive Stage
+              </h2>
+              <div class="preview-status-pill">
+                <div class="pulse-dot"></div>
+                <span>Live Sync</span>
+              </div>
+            </div>
+
+            <div class="preview-display-card">
+              <div id="qr-canvas-stage" class="qr-canvas-stage" title="Click to copy image directly">
+                <!-- Rendered dynamically -->
+              </div>
+
+              <!-- Meta specs row -->
+              <div class="qr-meta-bar">
+                <div class="meta-item">
+                  <span class="meta-label">Length</span>
+                  <span id="meta-length-val" class="meta-value">24</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Correction</span>
+                  <span id="meta-ec-val" class="meta-value">H (30%)</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Security</span>
+                  <span class="meta-value" style="color: #10b981;">Valid</span>
+                </div>
+              </div>
+
+              <!-- Primary Export Actions -->
+              <div class="export-actions-grid">
+                <button id="btn-download-png" class="btn btn-primary" title="Download High-Res PNG">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Download PNG
+                </button>
+                <button id="btn-download-svg" class="btn btn-secondary" title="Download Scalable Vector SVG">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                  Download SVG
+                </button>
+              </div>
+
+              <!-- Secondary Downloads & Clipboard -->
+              <div class="secondary-download-bar">
+                <button id="btn-download-pdf" class="btn btn-outline btn-sm" title="Download Print PDF">PDF</button>
+                <button id="btn-download-webp" class="btn btn-outline btn-sm" title="Download WebP">WebP</button>
+                <button id="btn-copy-clipboard" class="btn btn-outline btn-sm" title="Copy to Clipboard">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  Copy
+                </button>
+                <button id="btn-print-qr" class="btn btn-outline btn-sm" title="Print Sheet">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- ================================================================= -->
+    <!-- TAB 2: SCANNER & INSPECTOR -->
+    <!-- ================================================================= -->
+    <main id="tab-scanner" class="tab-pane">
+      <div class="scanner-container">
+
+        <!-- Left: Camera Stream / File Upload -->
+        <div class="glass-panel">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              Input Feed & Optical Sensor
+            </h2>
+            <div id="camera-status-pill" class="brand-badge">Camera Ready</div>
+          </div>
+
+          <!-- Mode switcher -->
+          <div class="scanner-view-toggle">
+            <button class="scanner-toggle-btn active" data-mode="camera" id="toggle-camera-mode">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              Live Camera
+            </button>
+            <button class="scanner-toggle-btn" data-mode="file" id="toggle-file-mode">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              Upload / Paste Image
+            </button>
+          </div>
+
+          <!-- Section A: Camera Stream Viewport -->
+          <div id="scanner-camera-section">
+            <div class="camera-viewport-card">
+              <video id="camera-video" autoplay muted playsinline></video>
+              <canvas id="camera-canvas"></canvas>
+
+              <!-- Futuristic Targeting Reticle & Laser Sweep -->
+              <div class="scanner-reticle-overlay">
+                <div class="reticle-box">
+                  <div class="reticle-corner corner-tl"></div>
+                  <div class="reticle-corner corner-tr"></div>
+                  <div class="reticle-corner corner-bl"></div>
+                  <div class="reticle-corner corner-br"></div>
+                  <div class="laser-beam"></div>
+                </div>
+              </div>
+
+              <!-- Interactive Camera Start / Permission Overlay -->
+              <div id="camera-start-overlay" style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(8, 11, 20, 0.88); z-index: 20; padding: 1.5rem; text-align: center; pointer-events: auto;">
+                <div style="width: 54px; height: 54px; border-radius: 50%; background: rgba(6, 182, 212, 0.15); display: flex; align-items: center; justify-content: center; margin-bottom: 0.85rem; color: #06b6d4;">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </div>
+                <button id="btn-manual-start-camera" class="btn btn-primary" type="button" style="box-shadow: 0 0 25px rgba(6, 182, 212, 0.5); cursor: pointer; pointer-events: auto;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  Turn On Camera
+                </button>
+                <span style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.6rem;">Click to allow camera access & start live scanning</span>
+              </div>
+            </div>
+
+            <!-- Controls below camera -->
+            <div class="camera-controls-bar">
+              <button id="btn-pause-scanner" class="btn btn-secondary btn-sm">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                Pause
+              </button>
+              <div style="display: flex; gap: 0.5rem;">
+                <button id="btn-toggle-torch" class="btn btn-secondary btn-sm" style="display: none;" title="Toggle Torch Flash">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                  Flash
+                </button>
+                <button id="btn-switch-camera" class="btn btn-secondary btn-sm" title="Switch Camera">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                  Flip Cam
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section B: File Drop & Paste Zone -->
+          <div id="scanner-file-section" style="display: none;">
+            <div id="scanner-drop-zone" class="drop-zone-card">
+              <div class="drop-zone-icon">
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              <div class="drop-zone-title">Drop QR Image Here</div>
+              <div class="drop-zone-subtitle">Supports PNG, JPG, WebP, GIF, BMP files</div>
+              <input type="file" id="scanner-file-input" accept="image/*" style="display: none;">
+              <div style="display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; margin-top: 0.5rem;">
+                <button class="btn btn-primary btn-sm" type="button">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Browse Local File
+                </button>
+                <button id="btn-paste-clipboard-img" class="btn btn-secondary btn-sm" type="button">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  Paste From Clipboard
+                </button>
+              </div>
+            </div>
+
+            <!-- Uploaded Image Preview & Reset -->
+            <div id="scanner-file-preview-wrap" style="display: none; margin-top: 1rem; text-align: center;">
+              <div style="display: inline-block; position: relative; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-glow); max-width: 260px; max-height: 260px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); background: rgba(0,0,0,0.3);">
+                <img id="scanner-file-preview-img" alt="Uploaded QR Code Preview" style="display: block; width: 100%; height: auto; max-height: 260px; object-fit: contain;" />
+              </div>
+              <div style="margin-top: 0.5rem;">
+                <button id="btn-clear-scanner-file" class="btn btn-outline btn-sm" type="button">Clear / Upload Another</button>
+              </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 1rem;">
+              <span class="paste-hint-pill">
+                <span>Instant Paste:</span>
+                <span class="kbd">Ctrl</span> + <span class="kbd">V</span>
+                <span>anywhere on this screen</span>
+              </span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right: Intelligent Result Inspector -->
+        <div class="glass-panel">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              Decoded Content & Telemetry
+            </h2>
+          </div>
+
+          <!-- Empty scan placeholder -->
+          <div id="scan-empty-notice" class="empty-state-card" style="padding: 2.5rem 1rem;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>
+            <h3>Ready to Scan</h3>
+            <p style="margin-top: 0.4rem; font-size: 0.85rem;">Point your camera at any QR code or paste an image to inspect formatted results.</p>
+          </div>
+
+          <!-- Decoded Result View (revealed upon detection) -->
+          <div id="scan-result-card" class="scan-result-card" style="display: none;">
+            <div class="scan-result-header">
+              <span id="scan-type-badge" class="scan-type-badge">URL Link</span>
+              <span id="scan-timestamp-val" class="scan-timestamp">12:00:00 PM</span>
+            </div>
+
+            <!-- Structured breakdown (SSID, Password, Name, etc.) -->
+            <div class="scan-structured-box">
+              <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700; margin-bottom: 0.5rem;">Structured Properties</div>
+              <div id="scan-structured-fields"></div>
+            </div>
+
+            <!-- Raw decoded string -->
+            <div>
+              <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700; margin-bottom: 0.4rem;">Raw Decoded Payload</div>
+              <div id="scan-raw-text" class="scan-raw-content"></div>
+            </div>
+
+            <!-- Contextual Quick Action (Open Link, Connect Wi-Fi, Call, etc.) -->
+            <div id="scan-contextual-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
+
+            <!-- Bottom utility buttons -->
+            <div style="display: flex; gap: 0.5rem; margin-top: auto; padding-top: 0.5rem; border-top: 1px solid var(--border-subtle);">
+              <button id="btn-copy-scanned-raw" class="btn btn-secondary btn-sm" style="flex: 1;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                Copy Raw
+              </button>
+              <button id="btn-open-in-generator" class="btn btn-secondary btn-sm" style="flex: 1;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                Edit in Studio
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+
+    <!-- ================================================================= -->
+    <!-- TAB 3: BATCH GENERATOR -->
+    <!-- ================================================================= -->
+    <main id="tab-batch" class="tab-pane">
+      <div class="batch-grid">
+
+        <!-- Left: Input & CSV -->
+        <div class="glass-panel">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+              Bulk Data Entry
+            </h2>
+            <span class="brand-badge">ZIP Exporter</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="batch-input-textarea">List of URLs or Text Strings (One per line)</label>
+            <textarea id="batch-input-textarea" class="form-textarea" style="min-height: 160px;" placeholder="https://example.com/item1
+https://example.com/item2
+https://example.com/item3"></textarea>
+            <div class="batch-textarea-helper">Enter multiple URLs, product IDs, Wi-Fi strings, or upload a CSV file below.</div>
+          </div>
+
+          <div style="margin: 1.25rem 0; display: flex; align-items: center; gap: 0.75rem;">
+            <label class="btn btn-secondary btn-sm" style="cursor: pointer;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Upload CSV Spreadsheet
+              <input type="file" id="batch-csv-input" accept=".csv" style="display: none;">
+            </label>
+            <span style="font-size: 0.8rem; color: var(--text-dim);">Accepts CSV with Filename,Content columns</span>
+          </div>
+
+          <div class="form-grid-2 form-group">
+            <div>
+              <label class="form-label" for="batch-filename-prefix">Filename Prefix</label>
+              <input type="text" id="batch-filename-prefix" class="form-input" value="qr_badge" placeholder="qr_badge">
+            </div>
+            <div>
+              <label class="form-label" for="batch-format-select">Export Format</label>
+              <select id="batch-format-select" class="form-select">
+                <option value="png" selected>PNG (High Resolution)</option>
+                <option value="svg">SVG (Scalable Vector)</option>
+                <option value="jpg">JPEG (Compressed)</option>
+              </select>
+            </div>
+          </div>
+
+          <button id="btn-start-batch-generate" class="btn btn-primary btn-full" style="margin-top: 1rem;" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Generate & Download ZIP Archive
+          </button>
+
+          <!-- Animated Progress Bar -->
+          <div id="batch-progress-box" class="batch-progress-box">
+            <div id="batch-progress-text" style="font-size: 0.82rem; color: var(--accent-secondary); font-weight: 600;">Processing...</div>
+            <div class="progress-track">
+              <div id="batch-progress-fill" class="progress-fill"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Items Preview Table -->
+        <div class="glass-panel">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              Queue Inspection
+            </h2>
+            <span id="batch-count-badge" class="brand-badge">0 Items</span>
+          </div>
+
+          <div id="batch-table-empty" class="empty-state-card" style="padding: 2.5rem 1rem;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <h3>No Batch Data</h3>
+            <p style="margin-top: 0.4rem; font-size: 0.85rem;">Type entries in the textarea or upload a CSV to view the queue.</p>
+          </div>
+
+          <table id="batch-preview-table" class="batch-items-preview-table" style="display: none;">
+            <thead>
+              <tr>
+                <th style="width: 40px;">#</th>
+                <th style="width: 120px;">Filename</th>
+                <th>Content Payload</th>
+              </tr>
+            </thead>
+            <tbody id="batch-preview-tbody"></tbody>
+          </table>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- ================================================================= -->
+    <!-- TAB 4: HISTORY & SAVED CODES -->
+    <!-- ================================================================= -->
+    <main id="tab-history" class="tab-pane">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Saved Codes & Historical Log
+          </h2>
+          <span id="history-total-count" class="brand-badge">0 Saved</span>
+        </div>
+
+        <!-- Controls: Filters, Search, Export -->
+        <div class="history-controls-bar">
+          <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+            <button class="option-chip history-filter-chip active" data-filter="all">All Logs</button>
+            <button class="option-chip history-filter-chip" data-filter="generated">Generated</button>
+            <button class="option-chip history-filter-chip" data-filter="scanned">Scanned</button>
+          </div>
+
+          <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+            <input type="text" id="history-search-input" class="form-input history-search-input" placeholder="Search history...">
+            <button id="btn-export-history-csv" class="btn btn-secondary btn-sm" title="Export as CSV">Export CSV</button>
+            <button id="btn-export-history-json" class="btn btn-secondary btn-sm" title="Export as JSON">JSON</button>
+            <button id="btn-clear-history" class="btn btn-outline btn-sm" style="color: #ef4444;" title="Clear Entire History">Clear All</button>
+          </div>
+        </div>
+
+        <!-- Dynamic Grid of History Cards -->
+        <div id="history-cards-grid" class="history-grid"></div>
+
+      </div>
+    </main>
+
+    <!-- App Footer -->
+    <footer class="app-footer">
+      <div class="brand-subtitle">&copy; 2026 QuantumQR Studio Pro &bull; High Precision Computer Vision Engine</div>
+      <div class="footer-tags">
+        <div class="footer-pill"><span>&bull;</span> OpenCV 5.0 Vision Core</div>
+        <div class="footer-pill"><span>&bull;</span> Python 3.12 Flask REST API</div>
+        <div class="footer-pill"><span>&bull;</span> 60 FPS Client-Side Decoder</div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Client Libraries -->
+  <script src="/static/js/jsQR.min.js?v=2.2"></script>
+  <script src="/static/js/qrcode.min.js?v=2.2"></script>
+  <script src="/static/js/jszip.min.js?v=2.2"></script>
+
+  <!-- Application Logic Modules -->
+  <script src="/static/js/app.js?v=2.2"></script>
+  <script src="/static/js/generator.js?v=2.2"></script>
+  <script src="/static/js/scanner.js?v=2.2"></script>
+  <script src="/static/js/batch.js?v=2.2"></script>
+  <script src="/static/js/history.js?v=2.2"></script>
+</body>
+</html>
