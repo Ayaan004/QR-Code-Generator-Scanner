@@ -313,29 +313,46 @@ const ScannerManager = {
   },
 
   startFrameLoop() {
-    const loop = () => {
+    let lastCheck = 0;
+    const loop = (timestamp) => {
       if (!this.isScanning) return;
 
-      if (this.videoEl && this.videoEl.readyState >= 2) {
-        const vW = this.videoEl.videoWidth;
-        const vH = this.videoEl.videoHeight;
+      // Throttle scan checks to ~12 FPS (every 80ms) for high efficiency and responsive UI
+      if (timestamp - lastCheck > 80) {
+        lastCheck = timestamp;
 
-        if (this.canvasEl && this.canvasCtx && vW > 0 && vH > 0) {
-          this.canvasEl.width = vW;
-          this.canvasEl.height = vH;
-          this.canvasCtx.drawImage(this.videoEl, 0, 0, vW, vH);
+        if (this.videoEl && this.videoEl.readyState >= 2) {
+          const vW = this.videoEl.videoWidth;
+          const vH = this.videoEl.videoHeight;
 
-          // Fast local decoding using jsQR
-          if (window.jsQR) {
-            const imgData = this.canvasCtx.getImageData(0, 0, vW, vH);
-            const code = jsQR(imgData.data, imgData.width, imgData.height, {
-              inversionAttempts: 'dontInvert'
-            });
+          if (this.canvasEl && this.canvasCtx && vW > 0 && vH > 0) {
+            // Only update dimensions if they changed to prevent context thrashing
+            if (this.canvasEl.width !== vW || this.canvasEl.height !== vH) {
+              this.canvasEl.width = vW;
+              this.canvasEl.height = vH;
+            }
 
-            if (code && code.data && code.data.trim()) {
-              if (code.data !== this.lastScannedContent) {
-                this.lastScannedContent = code.data;
-                this.onQRCodeDetected(code.data);
+            this.canvasCtx.drawImage(this.videoEl, 0, 0, vW, vH);
+
+            // Fast local decoding using jsQR
+            if (window.jsQR) {
+              try {
+                const imgData = this.canvasCtx.getImageData(0, 0, vW, vH);
+                const code = jsQR(imgData.data, imgData.width, imgData.height, {
+                  inversionAttempts: 'attemptBoth'
+                });
+
+                if (code && code.data && code.data.trim()) {
+                  const now = Date.now();
+                  // Allow re-scanning same code after 2.5s cooldown
+                  if (code.data !== this.lastScannedContent || (now - (this.lastScannedTimestamp || 0) > 2500)) {
+                    this.lastScannedContent = code.data;
+                    this.lastScannedTimestamp = now;
+                    this.onQRCodeDetected(code.data);
+                  }
+                }
+              } catch (e) {
+                // Ignore transient frame read errors
               }
             }
           }
@@ -351,27 +368,32 @@ const ScannerManager = {
   bindDropZone() {
     const dropZone = document.getElementById('scanner-drop-zone');
     const fileInput = document.getElementById('scanner-file-input');
+    const browseBtn = document.getElementById('btn-scanner-browse');
+    const pasteBtn = document.getElementById('btn-paste-clipboard-img');
+    const clearPreviewBtn = document.getElementById('btn-clear-scanner-file');
 
     if (!dropZone || !fileInput) return;
 
-    // Trigger file chooser on drop zone click
-    dropZone.addEventListener('click', (e) => {
+    const openFileDialog = (e) => {
+      if (e) e.stopPropagation();
       fileInput.value = '';
       fileInput.click();
-    });
+    };
 
-    // Also trigger specifically on the Browse button
-    const browseBtn = dropZone.querySelector('button');
+    // 1. Direct Browse Button Click
     if (browseBtn) {
-      browseBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        fileInput.value = '';
-        fileInput.click();
-      });
+      browseBtn.addEventListener('click', openFileDialog);
     }
 
-    // Direct Clipboard Paste Button
-    const pasteBtn = document.getElementById('btn-paste-clipboard-img');
+    // 2. Click on empty space inside Drop Zone (not on paste or browse buttons)
+    dropZone.addEventListener('click', (e) => {
+      if (e.target.closest('#btn-paste-clipboard-img') || e.target.closest('#btn-scanner-browse')) {
+        return;
+      }
+      openFileDialog(e);
+    });
+
+    // 3. Direct Clipboard Paste Button
     if (pasteBtn) {
       pasteBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -393,21 +415,20 @@ const ScannerManager = {
               }
             }
           }
-          // Fallback to text if no image
+          // Fallback to text if clipboard text contains QR payload
           const text = await navigator.clipboard.readText();
           if (text && text.trim()) {
             this.onQRCodeDetected(text.trim());
             return;
           }
-          showToast('No Image Found', 'Copy an image to your clipboard first, or press Ctrl+V', 'info', 3000);
+          showToast('No Image in Clipboard', 'Copy an image to clipboard first or press Ctrl+V', 'info', 3000);
         } catch (err) {
-          showToast('Clipboard Notice', 'Press Ctrl + V anywhere to paste an image', 'info', 3000);
+          showToast('Clipboard Access', 'Press Ctrl + V anywhere on screen to paste an image', 'info', 3000);
         }
       });
     }
 
-    // Clear preview button
-    const clearPreviewBtn = document.getElementById('btn-clear-scanner-file');
+    // 4. Clear Preview Button
     if (clearPreviewBtn) {
       clearPreviewBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -416,9 +437,14 @@ const ScannerManager = {
         if (previewWrap) previewWrap.style.display = 'none';
         if (previewImg) previewImg.src = '';
         if (fileInput) fileInput.value = '';
+        const emptyNotice = document.getElementById('scan-empty-notice');
+        const resultCard = document.getElementById('scan-result-card');
+        if (emptyNotice) emptyNotice.style.display = 'block';
+        if (resultCard) resultCard.style.display = 'none';
       });
     }
 
+    // 5. Drag & Drop Handling
     dropZone.addEventListener('dragover', (e) => {
       e.preventDefault();
       dropZone.classList.add('dragover');
@@ -436,6 +462,7 @@ const ScannerManager = {
       }
     });
 
+    // 6. File Input Change
     fileInput.addEventListener('change', (e) => {
       if (e.target.files && e.target.files.length > 0) {
         this.processUploadedFile(e.target.files[0]);
@@ -445,7 +472,6 @@ const ScannerManager = {
 
   bindGlobalPaste() {
     window.addEventListener('paste', (e) => {
-      // Do not intercept if user is typing into an input, textarea, or contentEditable
       const targetTag = e.target?.tagName?.toUpperCase();
       if (['INPUT', 'TEXTAREA'].includes(targetTag) || e.target?.isContentEditable) {
         return;
@@ -461,7 +487,7 @@ const ScannerManager = {
           const blob = items[i].getAsFile();
           if (blob) {
             e.preventDefault();
-            showToast('Image Pasted', 'Decoding QR code from clipboard...', 'info', 2000);
+            showToast('Image Pasted', 'Analyzing QR code from clipboard...', 'info', 2000);
             switchTab('scanner');
             const fileTabBtn = document.querySelector('.scanner-toggle-btn[data-mode="file"]');
             if (fileTabBtn) fileTabBtn.click();
@@ -475,62 +501,106 @@ const ScannerManager = {
         const text = e.clipboardData?.getData('text');
         if (text && text.trim()) {
           e.preventDefault();
-          showToast('Text Pasted', 'Analyzing decoded content...', 'info', 2000);
+          showToast('Text Detected', 'Analyzing decoded content...', 'info', 2000);
           this.onQRCodeDetected(text.trim());
         }
       }
     });
   },
 
+  /**
+   * Multi-scale, high-contrast client-side QR decoder
+   * Tested on transparent PNGs, phone photos, screenshots, and dark mode codes.
+   */
+  decodeImageClient(img) {
+    if (!window.jsQR) return null;
+
+    // Test dimensions pyramid: 800, 500, 1100, original
+    const dimsToTry = [];
+    const origW = img.naturalWidth || img.width;
+    const origH = img.naturalHeight || img.height;
+
+    [800, 500, 1100].forEach(maxDim => {
+      if (origW > maxDim || origH > maxDim) {
+        const scale = maxDim / Math.max(origW, origH);
+        dimsToTry.push({ w: Math.round(origW * scale), h: Math.round(origH * scale) });
+      }
+    });
+    dimsToTry.push({ w: origW, h: origH });
+
+    for (const dim of dimsToTry) {
+      const canvas = document.createElement('canvas');
+      canvas.width = dim.w;
+      canvas.height = dim.h;
+      const ctx = canvas.getContext('2d');
+
+      // CRITICAL: Paint pure white background first so transparent PNGs decode flawlessly!
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, dim.w, dim.h);
+      ctx.drawImage(img, 0, 0, dim.w, dim.h);
+
+      const imgData = ctx.getImageData(0, 0, dim.w, dim.h);
+
+      // Pass 1: Standard decode with inversion attempt
+      const code1 = jsQR(imgData.data, dim.w, dim.h, { inversionAttempts: 'attemptBoth' });
+      if (code1 && code1.data && code1.data.trim()) {
+        return code1.data.trim();
+      }
+
+      // Pass 2: High-contrast binarization pass (for low light / washed out camera photos)
+      const data = imgData.data;
+      let totalLuma = 0;
+      const len = data.length;
+      for (let i = 0; i < len; i += 4) {
+        const luma = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        totalLuma += luma;
+      }
+      const avgLuma = totalLuma / (len / 4);
+
+      for (let i = 0; i < len; i += 4) {
+        const luma = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        const val = luma > avgLuma ? 255 : 0;
+        data[i] = val;
+        data[i + 1] = val;
+        data[i + 2] = val;
+      }
+
+      const code2 = jsQR(data, dim.w, dim.h, { inversionAttempts: 'attemptBoth' });
+      if (code2 && code2.data && code2.data.trim()) {
+        return code2.data.trim();
+      }
+    }
+
+    return null;
+  },
+
   async processUploadedFile(file) {
     SoundFX.playClick();
-    showToast('Analyzing Image...', 'Running high-precision detector', 'info', 2000);
+    showToast('Analyzing Image...', 'Running high-precision optical detector', 'info', 2000);
 
     // Show preview thumbnail in drop zone
     const previewWrap = document.getElementById('scanner-file-preview-wrap');
     const previewImg = document.getElementById('scanner-file-preview-img');
+    const objectUrl = URL.createObjectURL(file);
+
     if (previewWrap && previewImg) {
-      previewImg.src = URL.createObjectURL(file);
+      previewImg.src = objectUrl;
       previewWrap.style.display = 'block';
     }
 
-    // Step 1: Fast Client-side decoding with jsQR
+    // Step 1: High-Performance Multi-Pass Client Decoding
     try {
       const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
       img.onload = () => {
-        // Resize down if huge for fast scan
-        const maxDim = 1200;
-        let w = img.width;
-        let h = img.height;
-        if (w > maxDim || h > maxDim) {
-          if (w > h) {
-            h = Math.round((h * maxDim) / w);
-            w = maxDim;
-          } else {
-            w = Math.round((w * maxDim) / h);
-            h = maxDim;
-          }
-        }
-
-        const testCanvas = document.createElement('canvas');
-        testCanvas.width = w;
-        testCanvas.height = h;
-        const testCtx = testCanvas.getContext('2d');
-        testCtx.drawImage(img, 0, 0, w, h);
+        const clientDecoded = this.decodeImageClient(img);
         URL.revokeObjectURL(objectUrl);
 
-        if (window.jsQR) {
-          const imgData = testCtx.getImageData(0, 0, w, h);
-          const code = jsQR(imgData.data, imgData.width, imgData.height, {
-            inversionAttempts: 'attemptBoth'
-          });
-          if (code && code.data && code.data.trim()) {
-            this.onQRCodeDetected(code.data);
-            return;
-          }
+        if (clientDecoded) {
+          this.onQRCodeDetected(clientDecoded);
+          return;
         }
-        // Fallback to backend OpenCV decoder
+
+        // Step 2: Fallback to Advanced OpenCV Backend Pipeline
         this.processBackendScan(file);
       };
       img.onerror = () => {
@@ -554,6 +624,10 @@ const ScannerManager = {
         body: formData
       });
 
+      if (!res.ok) {
+        throw new Error(`Server returned HTTP ${res.status}`);
+      }
+
       const json = await res.json();
       const raw = json.raw || json.data || json.content;
       const isSuccess = (json.success === true || json.status === 'success') && !!raw;
@@ -561,10 +635,10 @@ const ScannerManager = {
       if (isSuccess) {
         this.onQRCodeDetected(raw, json.parsed);
       } else {
-        showToast('No QR Code Found', json.error || json.message || 'Please ensure the QR code is clearly visible.', 'error', 3500);
+        showToast('No QR Code Detected', json.error || 'Please make sure the QR code image is clear and in focus.', 'error', 4000);
       }
     } catch (e) {
-      showToast('Scan Failed', e.message, 'error', 3500);
+      showToast('Scan Issue', 'Could not detect a QR code in this image. Try another photo or ensure adequate lighting.', 'error', 4000);
     }
   },
 
@@ -580,11 +654,18 @@ const ScannerManager = {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: rawText })
         });
-        const pJson = await res.json();
-        parsed = pJson.parsed || pJson;
+        if (res.ok) {
+          const pJson = await res.json();
+          parsed = pJson.parsed || pJson;
+        }
       } catch (e) {
-        parsed = { type: 'text', title: 'Scanned Text', data: { text: rawText } };
+        parsed = null;
       }
+    }
+
+    // Client-side parser fallback if backend parsing isn't reachable
+    if (!parsed) {
+      parsed = this.parseContentClient(rawText);
     }
 
     this.displayResult(rawText, parsed);
@@ -600,6 +681,43 @@ const ScannerManager = {
     }
 
     showToast('QR Code Decoded!', parsed.title || 'Content detected successfully', 'success', 3000);
+  },
+
+  parseContentClient(text) {
+    const t = text.trim();
+    if (t.startsWith('WIFI:')) {
+      const ssid = (t.match(/S:([^;]*);/) || [])[1] || '';
+      const pass = (t.match(/P:([^;]*);/) || [])[1] || '';
+      const auth = (t.match(/T:([^;]*);/) || [])[1] || 'WPA';
+      return { type: 'wifi', title: 'Wi-Fi Network', data: { ssid, password: pass, auth } };
+    }
+    if (t.toUpperCase().startsWith('BEGIN:VCARD')) {
+      const fn = (t.match(/(?:^|\n)FN:(.*?)(?:\r?\n|$)/i) || [])[1] || 'Contact';
+      const tel = (t.match(/(?:^|\n)TEL[^:]*:(.*?)(?:\r?\n|$)/i) || [])[1] || '';
+      const email = (t.match(/(?:^|\n)EMAIL[^:]*:(.*?)(?:\r?\n|$)/i) || [])[1] || '';
+      return { type: 'vcard', title: 'Contact Card (vCard)', data: { name: fn, phone: tel, email } };
+    }
+    if (/^(https?:\/\/|www\.)/i.test(t)) {
+      const url = /^https?:\/\//i.test(t) ? t : 'https://' + t;
+      return { type: 'url', title: 'Website Link', data: { url } };
+    }
+    if (t.toLowerCase().startsWith('mailto:')) {
+      return { type: 'email', title: 'Email Address', data: { email: t.replace(/^mailto:/i, '') } };
+    }
+    if (t.toLowerCase().startsWith('tel:')) {
+      return { type: 'phone', title: 'Phone Call', data: { phone: t.replace(/^tel:/i, '') } };
+    }
+    if (t.toLowerCase().startsWith('smsto:') || t.toLowerCase().startsWith('sms:')) {
+      return { type: 'sms', title: 'SMS Message', data: { raw: t } };
+    }
+    if (t.toLowerCase().startsWith('geo:')) {
+      return { type: 'geo', title: 'Geo Location', data: { coordinates: t.replace(/^geo:/i, '') } };
+    }
+    if (t.toUpperCase().startsWith('BEGIN:VEVENT') || t.toUpperCase().startsWith('BEGIN:VCALENDAR')) {
+      const title = (t.match(/(?:^|\n)SUMMARY:(.*?)(?:\r?\n|$)/i) || [])[1] || 'Calendar Event';
+      return { type: 'event', title: 'Calendar Event', data: { title } };
+    }
+    return { type: 'text', title: 'Plain Text', data: { text: t, length: t.length } };
   },
 
   displayResult(rawText, parsed) {
@@ -631,7 +749,7 @@ const ScannerManager = {
       const data = parsed.data || {};
 
       Object.entries(data).forEach(([key, val]) => {
-        if (key === 'raw_vcf' || typeof val === 'object') return;
+        if (key === 'raw_vcf' || typeof val === 'object' || !val) return;
         const row = document.createElement('div');
         row.className = 'structured-row';
         row.innerHTML = `
@@ -646,66 +764,126 @@ const ScannerManager = {
     if (actionsContainer) {
       actionsContainer.innerHTML = '';
 
+      // Helper to add action button
+      const addBtn = (label, svgIcon, onClick, href = null, isPrimary = true) => {
+        const el = href ? document.createElement('a') : document.createElement('button');
+        el.className = isPrimary ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+        el.innerHTML = `${svgIcon} <span>${label}</span>`;
+        if (href) {
+          el.href = href;
+          el.target = '_blank';
+          el.rel = 'noopener noreferrer';
+        }
+        if (onClick) {
+          el.addEventListener('click', (e) => {
+            if (!href) e.preventDefault();
+            onClick();
+          });
+        }
+        actionsContainer.appendChild(el);
+      };
+
+      // 1. URL Action
       if (parsed.type === 'url') {
-        const openBtn = document.createElement('a');
-        openBtn.className = 'btn btn-primary btn-sm';
-        openBtn.href = parsed.data.url;
-        openBtn.target = '_blank';
-        openBtn.rel = 'noopener noreferrer';
-        openBtn.innerHTML = `
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          Open Link
-        `;
-        actionsContainer.appendChild(openBtn);
-      } else if (parsed.type === 'wifi') {
-        const copyPassBtn = document.createElement('button');
-        copyPassBtn.className = 'btn btn-primary btn-sm';
-        copyPassBtn.innerHTML = `
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Copy Password
-        `;
-        copyPassBtn.addEventListener('click', () => {
-          navigator.clipboard.writeText(parsed.data.password || '');
-          showToast('Password Copied!', parsed.data.password, 'success');
-        });
-        actionsContainer.appendChild(copyPassBtn);
-      } else if (parsed.type === 'vcard') {
-        const vcfBtn = document.createElement('button');
-        vcfBtn.className = 'btn btn-primary btn-sm';
-        vcfBtn.innerHTML = `
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Save Contact (.vcf)
-        `;
-        vcfBtn.addEventListener('click', () => {
+        const targetUrl = parsed.data?.url || rawText;
+        addBtn('Open Link', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`, null, targetUrl, true);
+        addBtn('Copy URL', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`, () => {
+          navigator.clipboard.writeText(targetUrl);
+          showToast('Copied URL', targetUrl, 'success', 2000);
+        }, null, false);
+      }
+
+      // 2. Wi-Fi Actions
+      else if (parsed.type === 'wifi') {
+        const pass = parsed.data?.password || '';
+        if (pass) {
+          addBtn('Copy Wi-Fi Password', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`, () => {
+            navigator.clipboard.writeText(pass);
+            showToast('Password Copied!', pass, 'success', 2500);
+          }, null, true);
+        }
+        const ssid = parsed.data?.ssid || '';
+        if (ssid) {
+          addBtn('Copy SSID', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/></svg>`, () => {
+            navigator.clipboard.writeText(ssid);
+            showToast('Network Name Copied', ssid, 'info', 2000);
+          }, null, false);
+        }
+      }
+
+      // 3. vCard Action
+      else if (parsed.type === 'vcard') {
+        addBtn('Save Contact (.vcf)', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`, () => {
           const blob = new Blob([rawText], { type: 'text/vcard' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `${parsed.data.name || 'contact'}.vcf`;
+          a.download = `${parsed.data?.name || 'contact'}.vcf`;
           a.click();
           URL.revokeObjectURL(url);
-          showToast('Contact Saved', 'Downloaded .vcf file', 'success');
-        });
-        actionsContainer.appendChild(vcfBtn);
-      } else if (parsed.type === 'email') {
-        const mailBtn = document.createElement('a');
-        mailBtn.className = 'btn btn-primary btn-sm';
-        mailBtn.href = rawText;
-        mailBtn.innerHTML = `
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          Send Email
-        `;
-        actionsContainer.appendChild(mailBtn);
-      } else if (parsed.type === 'geo') {
-        const mapBtn = document.createElement('a');
-        mapBtn.className = 'btn btn-primary btn-sm';
-        mapBtn.href = parsed.data.maps_url;
-        mapBtn.target = '_blank';
-        mapBtn.innerHTML = `
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-          Open Maps
-        `;
-        actionsContainer.appendChild(mapBtn);
+          showToast('Contact Saved', 'Downloaded .vcf file', 'success', 2500);
+        }, null, true);
+      }
+
+      // 4. Email Action
+      else if (parsed.type === 'email') {
+        const mailHref = rawText.startsWith('mailto:') ? rawText : `mailto:${parsed.data?.to || rawText}`;
+        addBtn('Send Email', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`, null, mailHref, true);
+      }
+
+      // 5. Phone Action
+      else if (parsed.type === 'phone') {
+        const phoneNum = parsed.data?.phone || rawText.replace(/^tel:/i, '');
+        addBtn('Call Phone', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`, null, `tel:${phoneNum}`, true);
+        addBtn('Copy Number', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`, () => {
+          navigator.clipboard.writeText(phoneNum);
+          showToast('Copied Number', phoneNum, 'success', 2000);
+        }, null, false);
+      }
+
+      // 6. SMS / WhatsApp Action
+      else if (parsed.type === 'sms') {
+        const phone = parsed.data?.phone || '';
+        const msg = parsed.data?.message || '';
+        addBtn('Send SMS', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`, null, `sms:${phone}?body=${encodeURIComponent(msg)}`, true);
+        if (phone) {
+          const cleanPhone = phone.replace(/[^0-9]/g, '');
+          addBtn('Open WhatsApp', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>`, null, `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, false);
+        }
+      }
+
+      // 7. Geo Action
+      else if (parsed.type === 'geo') {
+        const mapsUrl = parsed.data?.maps_url || `https://www.google.com/maps?q=${parsed.data?.latitude || '0'},${parsed.data?.longitude || '0'}`;
+        addBtn('Open in Google Maps', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>`, null, mapsUrl, true);
+      }
+
+      // 8. Crypto / Payment Action
+      else if (parsed.type === 'crypto') {
+        addBtn('Copy Payment / Address', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`, () => {
+          navigator.clipboard.writeText(rawText);
+          showToast('Payment String Copied', rawText, 'success', 2500);
+        }, null, true);
+      }
+
+      // 9. Calendar Event Action
+      else if (parsed.type === 'event') {
+        addBtn('Download Event (.ics)', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`, () => {
+          const icsData = rawText.includes('BEGIN:VCALENDAR') ? rawText : `BEGIN:VCALENDAR\nVERSION:2.0\n${rawText}\nEND:VCALENDAR`;
+          const blob = new Blob([icsData], { type: 'text/calendar' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${parsed.data?.title || 'event'}.ics`;
+          a.click();
+          URL.revokeObjectURL(url);
+          showToast('Event Downloaded', 'Import into Outlook or Google Calendar', 'success', 2500);
+        }, null, true);
+      }
+
+      // 10. Default Plain Text Action
+      else {
+        addBtn('Search Web', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`, null, `https://www.google.com/search?q=${encodeURIComponent(rawText)}`, true);
       }
     }
   },

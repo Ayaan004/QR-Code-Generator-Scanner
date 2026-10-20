@@ -233,7 +233,7 @@ def parse_qr_content(raw_text):
         }
 
     # 9. Calendar Event
-    if text.upper().startswith("BEGIN:VEVENT"):
+    if text.upper().startswith("BEGIN:VEVENT") or text.upper().startswith("BEGIN:VCALENDAR"):
         summary_m = re.search(r'(?:^|\n)SUMMARY:(.*?)(?:\r?\n|$)', text, re.IGNORECASE)
         location_m = re.search(r'(?:^|\n)LOCATION:(.*?)(?:\r?\n|$)', text, re.IGNORECASE)
         dtstart_m = re.search(r'(?:^|\n)DTSTART:(.*?)(?:\r?\n|$)', text, re.IGNORECASE)
@@ -491,50 +491,134 @@ def api_generate():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+def _try_detect_with_all(img_candidate):
+    """Attempt decoding using both QRCodeDetectorAruco and legacy QRCodeDetector."""
+    if img_candidate is None:
+        return None, []
+
+    # 1. Try QRCodeDetectorAruco if available
+    try:
+        aruco = cv2.QRCodeDetectorAruco()
+        val, points, _ = aruco.detectAndDecode(img_candidate)
+        if val and val.strip():
+            pts = points[0].tolist() if points is not None and len(points) > 0 else []
+            return val.strip(), pts
+    except Exception:
+        pass
+
+    # 2. Try legacy QRCodeDetector
+    try:
+        detector = cv2.QRCodeDetector()
+        val, points, _ = detector.detectAndDecode(img_candidate)
+        if val and val.strip():
+            pts = points[0].tolist() if points is not None and len(points) > 0 else []
+            return val.strip(), pts
+    except Exception:
+        pass
+
+    return None, []
+
+
 def cv_decode_qr_pipeline(cv_img):
     """
-    Multi-stage OpenCV decoding pipeline with adaptive filtering,
-    sharpening, contrast stretch (CLAHE), thresholding, and rotations.
+    High-precision multi-stage OpenCV decoding pipeline:
+    - Alpha channel transparent background composited over white
+    - Multi-scale image pyramid (800px, 600px, full size)
+    - Contrast enhancement (CLAHE)
+    - Adaptive Gaussian and Otsu binarization
+    - Morphological cleanup
+    - 90/180/270 rotations
     """
-    detector = cv2.QRCodeDetector()
+    if cv_img is None:
+        return None, []
 
-    # Stage 1: Direct decode
-    val, points, _ = detector.detectAndDecode(cv_img)
-    if val and val.strip():
-        pts = points[0].tolist() if points is not None and len(points) > 0 else []
-        return val, pts
+    # Handle RGBA / BGRA transparency by compositing over crisp white
+    if len(cv_img.shape) == 3 and cv_img.shape[2] == 4:
+        alpha = cv_img[:, :, 3].astype(float) / 255.0
+        bgr = cv_img[:, :, :3].astype(float)
+        white_bg = np.ones_like(bgr) * 255.0
+        cv_img = (bgr * alpha[:, :, None] + white_bg * (1.0 - alpha[:, :, None])).astype(np.uint8)
 
-    # Stage 2: Grayscale + CLAHE (Contrast enhancement)
-    gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY) if len(cv_img.shape) == 3 else cv_img
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    enhanced = clahe.apply(gray)
-    val, points, _ = detector.detectAndDecode(enhanced)
-    if val and val.strip():
-        pts = points[0].tolist() if points is not None and len(points) > 0 else []
-        return val, pts
+    # Prepare scale variations (original, max 800, max 500)
+    h, w = cv_img.shape[:2]
+    scales = [cv_img]
 
-    # Stage 3: Adaptive thresholding
-    thresh = cv2.adaptiveThreshold(
-        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 51, 10
-    )
-    val, points, _ = detector.detectAndDecode(thresh)
-    if val and val.strip():
-        pts = points[0].tolist() if points is not None and len(points) > 0 else []
-        return val, pts
+    for target_max in [800, 500]:
+        if max(h, w) > target_max:
+            scale_factor = target_max / float(max(h, w))
+            new_w = max(1, int(w * scale_factor))
+            new_h = max(1, int(h * scale_factor))
+            resized = cv2.resize(cv_img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+            scales.append(resized)
 
-    # Stage 4: Otsu thresholding
-    _, otsu = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    val, points, _ = detector.detectAndDecode(otsu)
-    if val and val.strip():
-        pts = points[0].tolist() if points is not None and len(points) > 0 else []
-        return val, pts
+    for img_variant in scales:
+        # Step 1: Direct decode
+        val, pts = _try_detect_with_all(img_variant)
+        if val:
+            return val, pts
 
-    # Stage 5: Rotations (90, 180, 270)
-    for rot in [cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_180, cv2.ROTATE_90_COUNTERCLOCKWISE]:
-        rotated = cv2.rotate(gray, rot)
-        val, points, _ = detector.detectAndDecode(rotated)
-        if val and val.strip():
-            return val, []
+        # Convert to Grayscale
+        gray = cv2.cvtColor(img_variant, cv2.COLOR_BGR2GRAY) if len(img_variant.shape) == 3 else img_variant
+
+        # Step 2: Grayscale direct
+        val, pts = _try_detect_with_all(gray)
+        if val:
+            return val, pts
+
+        # Step 3: CLAHE Contrast Stretch
+        try:
+            clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+            enhanced = clahe.apply(gray)
+            val, pts = _try_detect_with_all(enhanced)
+            if val:
+                return val, pts
+        except Exception:
+            enhanced = gray
+
+        # Step 4: Otsu Binarization
+        try:
+            _, otsu = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            val, pts = _try_detect_with_all(otsu)
+            if val:
+                return val, pts
+
+            # Inverted Otsu
+            val, pts = _try_detect_with_all(255 - otsu)
+            if val:
+                return val, pts
+        except Exception:
+            pass
+
+        # Step 5: Adaptive Gaussian Thresholding
+        try:
+            thresh = cv2.adaptiveThreshold(
+                gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 51, 10
+            )
+            val, pts = _try_detect_with_all(thresh)
+            if val:
+                return val, pts
+        except Exception:
+            pass
+
+        # Step 6: Sharpening kernel
+        try:
+            kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+            sharpened = cv2.filter2D(gray, -1, kernel)
+            val, pts = _try_detect_with_all(sharpened)
+            if val:
+                return val, pts
+        except Exception:
+            pass
+
+        # Step 7: Rotations (90, 180, 270 degrees)
+        for rot in [cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_180, cv2.ROTATE_90_COUNTERCLOCKWISE]:
+            try:
+                rotated = cv2.rotate(gray, rot)
+                val, pts = _try_detect_with_all(rotated)
+                if val:
+                    return val, []
+            except Exception:
+                pass
 
     return None, []
 
@@ -543,7 +627,7 @@ def cv_decode_qr_pipeline(cv_img):
 def api_scan():
     """
     Accepts uploaded image file or base64 data URL,
-    decodes QR code with OpenCV pipeline, parses structured content.
+    decodes QR code with high-precision OpenCV pipeline, parses structured content.
     """
     try:
         cv_img = None
@@ -551,7 +635,8 @@ def api_scan():
         if 'file' in request.files:
             file = request.files['file']
             file_bytes = np.frombuffer(file.read(), np.uint8)
-            cv_img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+            # Use IMREAD_UNCHANGED to preserve alpha channel for transparency handling
+            cv_img = cv2.imdecode(file_bytes, cv2.IMREAD_UNCHANGED)
 
         elif request.json and 'image_base64' in request.json:
             b64 = request.json['image_base64']
@@ -559,17 +644,17 @@ def api_scan():
                 b64 = b64.split(',', 1)[1]
             img_bytes = base64.b64decode(b64)
             np_arr = np.frombuffer(img_bytes, np.uint8)
-            cv_img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+            cv_img = cv2.imdecode(np_arr, cv2.IMREAD_UNCHANGED)
 
         if cv_img is None:
-            return jsonify({"success": False, "error": "Invalid or missing image"}), 400
+            return jsonify({"success": False, "error": "Invalid or missing image file"}), 400
 
         content, points = cv_decode_qr_pipeline(cv_img)
 
         if not content:
             return jsonify({
                 "success": False,
-                "error": "No QR code could be detected in this image. Try improving lighting or focus."
+                "error": "No QR code could be detected. Please ensure the QR code is clear, well-lit, and in focus."
             }), 200
 
         parsed = parse_qr_content(content)

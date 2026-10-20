@@ -432,6 +432,9 @@ const Generator = {
         const scheme = document.getElementById('crypto-scheme')?.value || 'bitcoin';
         const addr = document.getElementById('crypto-addr')?.value.trim() || '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa';
         const amt = document.getElementById('crypto-amt')?.value.trim();
+        if (scheme === 'upi') {
+          return amt ? `upi://pay?pa=${addr}&pn=Merchant&am=${amt}&cu=INR` : `upi://pay?pa=${addr}&pn=Merchant&cu=INR`;
+        }
         return amt ? `${scheme}:${addr}?amount=${amt}` : `${scheme}:${addr}`;
       }
       case 'event': {
@@ -443,13 +446,15 @@ const Generator = {
         const fmtDate = (dStr) => dStr ? dStr.replace(/[-:]/g, '') + '00Z' : '';
 
         return [
-          'BEGIN:VCARD',
+          'BEGIN:VCALENDAR',
+          'VERSION:2.0',
           'BEGIN:VEVENT',
           `SUMMARY:${summary}`,
           loc ? `LOCATION:${loc}` : '',
           start ? `DTSTART:${fmtDate(start)}` : '',
           end ? `DTEND:${fmtDate(end)}` : '',
-          'END:VEVENT'
+          'END:VEVENT',
+          'END:VCALENDAR'
         ].filter(Boolean).join('\n');
       }
       default:
@@ -659,10 +664,6 @@ const Generator = {
         const json = await res.json();
         if (json.success && json.data_url) {
           this.currentQRDataUrl = json.data_url;
-          // Render backend image
-          if (stage) {
-            stage.innerHTML = `<img id="main-qr-preview-img" src="${json.data_url}" alt="Quantum QR Preview" style="max-width:100%; max-height:100%; object-fit:contain;" />`;
-          }
 
           if (window.HistoryManager) {
             window.HistoryManager.addEntry({
@@ -677,10 +678,10 @@ const Generator = {
         }
       }
     } catch (e) {
-      // Backend not running on this port - client canvas already rendered above flawlessly!
+      // Backend generation fallback
     }
 
-    // Save to History from client canvas data URL
+    // Save to History from client canvas data URL if backend was offline
     if (window.HistoryManager && this.currentQRDataUrl) {
       window.HistoryManager.addEntry({
         type: this.activeType,
